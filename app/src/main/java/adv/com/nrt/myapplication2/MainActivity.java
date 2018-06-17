@@ -548,7 +548,7 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
                     Log.d(TAG, "ConnectedSocket connect .....");
                     ret = socketConnection.connect();
                     while(!ret) {
-                        Thread.sleep(50);
+                        Thread.sleep(5000);
                         Log.d(TAG, "Socket error, connected again");
                         ret = socketConnection.connect();
                     }
