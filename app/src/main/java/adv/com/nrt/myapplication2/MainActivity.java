@@ -464,8 +464,8 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
         isFirstCreate = true;
         //init();
         registerBroadcastReceiver(this);
-        mdsumFileVerify();
-        //initData();
+        //mdsumFileVerify();
+        initData();
         socketConnection = new SocketConnection();
         socketConnection.setListener(MainActivity.this);
         //开机后，先下载md5校验文件并进行校验
