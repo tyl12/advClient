@@ -11,6 +11,7 @@ public class Constants {
     public static final String HTTPS_SUM_FLAG_TEMP = "md5sumtemp";
     public static final String HTTPS_TMP_DATA_LIST = "datatemp.json";
     public static final String HTTPS_DATA_JSON = "data.json";
+    public static final String HOST_NAME = "192.168.0.100";
     public static final String FILE_ADDRESS_ROOT = "/mnt/sdcard/Shelter/";
     public static final String FILE_CFG = "/mnt/sdcard/ad.cfg";
     public static final String FILE_SUBDIR = "data/";
@@ -19,6 +20,7 @@ public class Constants {
     public static final int CHANGE_DURATION = 60000;
     public static final int RECEIVE_TIMEOUT = 3000;
     public static final boolean IS_RANDOM = true;
+
 
 
 

@@ -75,6 +75,7 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
     private int changeDuration = Constants.CHANGE_DURATION;
     private int recvTimeout = Constants.RECEIVE_TIMEOUT;
     private boolean isRandom = Constants.IS_RANDOM;
+    private String hostname = Constants.HOST_NAME;
 
     private JSONArray mNeedUPdateJSONArray = null;
     private int flagForPicture = 0;
@@ -425,15 +426,16 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
 
         }
     }
-
-    private void initData() {
-        Log.d(TAG, "init data");
-        p_video_path = FileUtils.getFileList("/mnt/sdcard/Shelter");
+    private  void initConfig() {
         try {
             FileInputStream fileInputStream = new FileInputStream(Constants.FILE_CFG);
             InputStreamReader inputStreamReader = new InputStreamReader(fileInputStream, "UTF-8");
             BufferedReader bfr = new BufferedReader(inputStreamReader);
             String line = bfr.readLine();
+            if (line != null) {
+                hostname = line;
+            }
+            line = bfr.readLine();
             if (line != null) {
                 changeDuration = Integer.parseInt(line);
             }
@@ -450,7 +452,10 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
         } catch (IOException e) {
             e.printStackTrace();
         }
-
+    }
+    private void initData() {
+        Log.d(TAG, "init data");
+        p_video_path = FileUtils.getFileList("/mnt/sdcard/Shelter");
     }
 
     @Override
@@ -462,8 +467,9 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
         mContext = this;
         mAdvPic = (ImageView) findViewById(R.id.image_adv_pic);
         isFirstCreate = true;
+        initConfig();
         //init();
-        registerBroadcastReceiver(this);
+        //registerBroadcastReceiver(this);
         //mdsumFileVerify();
         initData();
         socketConnection = new SocketConnection();
@@ -546,11 +552,11 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
         boolean ret = true;
                 try {
                     Log.d(TAG, "ConnectedSocket connect .....");
-                    ret = socketConnection.connect();
+                    ret = socketConnection.connect(hostname);
                     while(!ret) {
-                        Thread.sleep(5000);
+                        Thread.sleep(10000);
                         Log.d(TAG, "Socket error, connected again");
-                        ret = socketConnection.connect();
+                        ret = socketConnection.connect(hostname);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -570,11 +576,13 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
 
     private void jsonDataFileDownload() {
         File file = new File("/mnt/sdcard/Shelter/data.json");
+        String dataUrl = "http://"+hostname+"/data.json";
         if (file != null && !file.exists()) {
-            DOWNLOAD_DATA_JSON_ID = FileUtils.downloadAdv(MainActivity.this, "http://192.168.0.100/data.json", "/mnt/sdcard/Shelter/data.json");
+            DOWNLOAD_DATA_JSON_ID = FileUtils.downloadAdv(MainActivity.this, dataUrl, "/mnt/sdcard/Shelter/data.json");
             isNeedUpdateJSON = true;
         } else {
-            DOWNLOAD_DATA_JSON_ID = FileUtils.downloadAdv(MainActivity.this, "http://192.168.0.100/data.json", "/mnt/sdcard/Shelter/datatemp.json");
+
+            DOWNLOAD_DATA_JSON_ID = FileUtils.downloadAdv(MainActivity.this, dataUrl, "/mnt/sdcard/Shelter/datatemp.json");
         }
 
     }
@@ -873,9 +881,10 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
     private void dataJSONFileVerify(){
         Log.d(TAG, "dataJSONFileVerify ---------------");
         File file = new File("/mnt/sdcard/Shelter/data.json");
+        String dataUrl = "http://" + hostname+"/data.json";
         if (file !=null && !file.exists()){
             Log.d(TAG, "first init download data.json file  ---------------");
-            DOWNLOAD_DATA_JSON_ID = FileUtils.downloadAdv(MainActivity.this,"http://192.168.0.100/data.json", "/mnt/sdcard/Shelter/data.json");
+            DOWNLOAD_DATA_JSON_ID = FileUtils.downloadAdv(MainActivity.this,dataUrl, "/mnt/sdcard/Shelter/data.json");
             isNeedUpdateJSON = true;
             mAction = MyAction.DOWNLOAD_DATA_JSON;
             //第一次下载data.json
@@ -883,7 +892,7 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
             Log.d(TAG, "delete data.json file and /data folder");
             //先删除data.json 和 data数据
             deleteJsonFileAndDataFiles();
-            DOWNLOAD_DATA_JSON_ID = FileUtils.downloadAdv(MainActivity.this,"http://192.168.0.100/data.json", "/mnt/sdcard/Shelter/data.json");
+            DOWNLOAD_DATA_JSON_ID = FileUtils.downloadAdv(MainActivity.this,dataUrl, "/mnt/sdcard/Shelter/data.json");
         }
     }
 
@@ -894,15 +903,16 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
 
         Log.d(TAG, "mdsumFileVerify ---------- start");
         File file = new File("/mnt/sdcard/Shelter/md5sum");
+        String md5Url = "http://" + hostname+"/md5sum";
         if (file !=null && !file.exists()){
             Log.d(TAG, "file is not exist /mnt/sdcard/Shelter/md5sum so need to download it");
-            DOWNLOAD_MD_ID = FileUtils.downloadAdv(MainActivity.this,"http://192.168.0.100/md5sum", "/mnt/sdcard/Shelter/md5sum");
+            DOWNLOAD_MD_ID = FileUtils.downloadAdv(MainActivity.this,md5Url, "/mnt/sdcard/Shelter/md5sum");
             mAction = MyAction.DOWNLOAD_MD;
         } else {
             Log.d(TAG, "download md5wum file and save to tmep");
 
             mAction = MyAction.DOWNLOAD_MD_TEMP;
-            DOWNLOAD_MD_ID = FileUtils.downloadAdv(MainActivity.this,"http://192.168.0.100/md5sum", "/mnt/sdcard/Shelter/md5sumtemp");
+            DOWNLOAD_MD_ID = FileUtils.downloadAdv(MainActivity.this,md5Url, "/mnt/sdcard/Shelter/md5sumtemp");
         }
     }
 

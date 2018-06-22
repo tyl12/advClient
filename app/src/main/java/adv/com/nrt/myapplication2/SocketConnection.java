@@ -69,14 +69,16 @@ public class SocketConnection {
     public void setListener(SocketListener listener){
         mSocketListener = listener;
     }
-    public boolean connect() throws Exception {
+    public boolean connect(String hostname) throws Exception {
 
         //System.out.println("test E");
         String str = "register";
         //String msg = "message";
         try {
             //socket = new Socket("67.218.158.111", 8881);
-            socket = new Socket("192.168.0.100", 8882);
+            Log.e(TAG, "111111hostname = " + hostname);
+            socket = new Socket(hostname, 8882);
+            Log.e(TAG, "hostname = " + hostname);
             dos = new DataOutputStream(socket.getOutputStream());
             osw = new OutputStreamWriter(socket.getOutputStream(), "UTF-8");
             dis = new DataInputStream(socket.getInputStream());
@@ -96,6 +98,7 @@ public class SocketConnection {
             //Thread.sleep(1000*10);
         } catch (IOException e) {
             System.err.print(e);
+            Log.e(TAG, "exception = " + e);
             isConnected = false;
 
 
