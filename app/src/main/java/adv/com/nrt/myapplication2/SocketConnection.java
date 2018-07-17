@@ -17,6 +17,14 @@ public class SocketConnection {
     DataOutputStream dos;
     DataInputStream dis;
     boolean isConnected = false;
+    String mHostname;
+    int mPort;
+    boolean mIsWeight;
+    public SocketConnection(String hostname, int port, boolean isWeight) {
+        mHostname = hostname;
+        mPort = port;
+        mIsWeight = isWeight;
+    }
 
     void convert(byte[] data, int startIndex, int value) {
         for(int i = 0; i < 4; i++) {
@@ -55,13 +63,12 @@ public class SocketConnection {
         }
 
         //System.out.println("recv: " + s);
-        mSocketListener.onReceive(s);
+        mSocketListener.onReceive(s, mIsWeight);
         return s;
     }
 
     public interface SocketListener{
-        void onReceive(String str);
-        void onError();
+        void onReceive(String str, boolean isWeight);
     }
 
 
@@ -69,16 +76,16 @@ public class SocketConnection {
     public void setListener(SocketListener listener){
         mSocketListener = listener;
     }
-    public boolean connect(String hostname) throws Exception {
+    public boolean connect() throws Exception {
 
         //System.out.println("test E");
         String str = "register";
         //String msg = "message";
         try {
             //socket = new Socket("67.218.158.111", 8881);
-            Log.e(TAG, "111111hostname = " + hostname);
-            socket = new Socket(hostname, 8882);
-            Log.e(TAG, "hostname = " + hostname);
+            Log.e(TAG, "111111hostname = " + mHostname);
+            socket = new Socket(mHostname, mPort);
+            Log.e(TAG, "hostname = " + mHostname);
             dos = new DataOutputStream(socket.getOutputStream());
             osw = new OutputStreamWriter(socket.getOutputStream(), "UTF-8");
             dis = new DataInputStream(socket.getInputStream());

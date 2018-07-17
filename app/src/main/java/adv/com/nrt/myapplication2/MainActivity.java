@@ -55,14 +55,14 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
     //p_video_path为视频地址存放bean，
     public int Video_index = 0;
     private boolean isStoped = false;
-    private SocketConnection socketConnection = null;
+    private SocketConnection adSocketConnection = null;
+    private SocketConnection weightSocketConnection = null;
     private long DOWNLOAD_MD_ID = 1;
     private long DOWNLOAD_DATA_JSON_ID = 2;
     private boolean isNeedUpdateMD = false;
     private boolean isNeedUpdateJSON = false;
     private static final int MSG_PLAY_NORMAL = 1;
     private static final int MSG_PLAY_NEXT = 2;
-    private static final int MSG_PLAY_PICTRUE = 4;
     private static final int MSG_DOWNDOWN_JSON = 3;
     //private static final int MSG_RENAME_MD = 5;
     private static final int MSG_UPDATE_FILELIST = 6;
@@ -71,7 +71,10 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
     private static final int MSG_DOWNLOAD_ALL = 9;
     private static final int MSG_CHECK_JSON = 10;
     private static final int MSG_UPDATE_PLAY_LIST = 11;
+    private static final int MSG_PLAY_WEIGHT_NEXT = 12;
+    private static final int MSG_PLAY_WEIGHT = 13;
     private boolean isSurfaceCreated = false;
+    private Boolean isWeightPlaying = false;
     private int changeDuration = Constants.CHANGE_DURATION;
     private int recvTimeout = Constants.RECEIVE_TIMEOUT;
     private boolean isRandom = Constants.IS_RANDOM;
@@ -83,7 +86,13 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
 
     public class ConnectThread extends Thread{
         public void run() {
-            ConnectedSocket();
+            ConnectedSocket(adSocketConnection);
+        }
+    }
+
+    public class ConnectWeightThread extends Thread{
+        public void run() {
+            ConnectedSocket(weightSocketConnection);
         }
     }
 
@@ -128,14 +137,22 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
                     }
                     play(p_video_path.get(Video_index).getVideo_url());
                     break;
-                case MSG_PLAY_PICTRUE:
-                    Video_index++;
+                case MSG_PLAY_WEIGHT_NEXT:
+                    nextIndex();
+                    synchronized (isWeightPlaying) {
+                        isWeightPlaying = false;
+                        play(p_video_path.get(Video_index).getVideo_url());
+                    }
+                    break;
+                case MSG_PLAY_WEIGHT:
+                    if (p_video_path.size() == 0) {
+                        break;
+                    }
                     if (Video_index == p_video_path.size()) {
                         Video_index = 0;
                     }
                     play(p_video_path.get(Video_index).getVideo_url());
                     break;
-
                 case MSG_DOWNDOWN_JSON: {
                     dataJSONFileVerify();
                     break;
@@ -176,14 +193,9 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
     private long lastTime = 0l;
 
 
-    @Override
-    public void onError() {
-        Log.d(TAG, "Socket error, connected again");
-        ConnectedSocket();
-    }
 
     @Override
-    public void onReceive(String s) {
+    public void onReceive(String s, boolean isWeight) {
         if (s == null || s.equals("advertise")) {
             // Log.d(TAG, "invalid msg ...");
             return;
@@ -195,7 +207,7 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
         if (lastTime == 0l) {
             lastTime = currentTimeMillis;
         }
-        if (currentTimeMillis - lastTime < recvTimeout && currentTimeMillis != lastTime) {
+        if (currentTimeMillis - lastTime < recvTimeout && currentTimeMillis != lastTime && isWeight == false) {
             return;
         }
         lastTime = currentTimeMillis;
@@ -221,8 +233,19 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
             try {
                 Log.d(TAG, "onReceive send message Video_index = " + Video_index + " ad_id =" + id);
                 myHandler.removeMessages(MSG_PLAY_NEXT);
+                myHandler.removeMessages(MSG_PLAY_WEIGHT_NEXT);
                 myHandler.removeMessages(MSG_PLAY_NORMAL);
-                myHandler.sendEmptyMessage(MSG_PLAY_NORMAL);
+                synchronized (isWeightPlaying) {
+                    if (isWeight == true) {
+                        isWeightPlaying = true;
+                        myHandler.sendEmptyMessage(MSG_PLAY_WEIGHT);
+                    } else {
+                        if (isWeightPlaying == true) {
+                            return;
+                        }
+                        myHandler.sendEmptyMessage(MSG_PLAY_NORMAL);
+                    }
+                }
             } catch (Exception e) {
                 Log.e(TAG, "exception !!! ", e);
             }
@@ -292,12 +315,16 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
                 boolean ret = playPicture(filepath);
 
                 playingUrl = filepath;
-                myHandler.removeMessages(MSG_PLAY_PICTRUE);
                 myHandler.removeMessages(MSG_PLAY_NEXT);
+                myHandler.removeMessages(MSG_PLAY_WEIGHT_NEXT);
+                int msg = MSG_PLAY_NEXT;
+                if (isWeightPlaying == true) {
+                    msg = MSG_PLAY_WEIGHT_NEXT;
+                }
                 if (ret == true) {
-                    myHandler.sendEmptyMessageDelayed(MSG_PLAY_NEXT, changeDuration);
+                    myHandler.sendEmptyMessageDelayed(msg, changeDuration);
                 } else {
-                    myHandler.sendEmptyMessage(MSG_PLAY_NEXT);
+                    myHandler.sendEmptyMessage(msg);
                 }
                 flagForPicture = Video_index;
             } else {
@@ -414,7 +441,11 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
                         Log.d(TAG, "palyvideo enter sync");
                         synchronized (p_video_path) {
                             playingUrl = null;
-                            myHandler.sendEmptyMessage(MSG_PLAY_NEXT);
+                            if (isWeightPlaying == true) {
+                                myHandler.sendEmptyMessage(MSG_PLAY_WEIGHT_NEXT);
+                            } else {
+                                myHandler.sendEmptyMessage(MSG_PLAY_NEXT);
+                            }
                         }
                         Log.d(TAG, "palyvideo  exit sync");
 
@@ -472,8 +503,10 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
         //registerBroadcastReceiver(this);
         //mdsumFileVerify();
         initData();
-        socketConnection = new SocketConnection();
-        socketConnection.setListener(MainActivity.this);
+        adSocketConnection = new SocketConnection(hostname, Constants.AD_PORT, false);
+        adSocketConnection.setListener(MainActivity.this);
+        weightSocketConnection = new SocketConnection(hostname, Constants.WEIGHT_PORT, true);
+        weightSocketConnection.setListener(MainActivity.this);
         //开机后，先下载md5校验文件并进行校验
         //downloadMD5AndCheckSum();
         //根据md5校验状态决定是否下载json数据
@@ -484,6 +517,7 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
         vedioSurfaceView();
         //ConnectedSocket();
         new ConnectThread().start();
+        new ConnectWeightThread().start();
         // ATTENTION: This was auto-generated to implement the App Indexing API.
         // See https://g.co/AppIndexing/AndroidStudio for more information.
         client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
@@ -513,8 +547,11 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
                 Uri.parse("android-app://adv.com.nrt.myapplication2/http/host/path")
         );
         AppIndex.AppIndexApi.end(client, viewAction);
-        if (socketConnection != null) {
-            socketConnection.closeSocket();
+        if (adSocketConnection != null) {
+            adSocketConnection.closeSocket();
+        }
+        if (weightSocketConnection != null) {
+            weightSocketConnection.closeSocket();
         }
         synchronized (mp) {
             if (mp != null && mp.isPlaying()) {
@@ -534,8 +571,12 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (socketConnection != null) {
-            socketConnection.closeSocket();
+        if (adSocketConnection != null) {
+            adSocketConnection.closeSocket();
+        }
+
+        if (weightSocketConnection != null) {
+            weightSocketConnection.closeSocket();
         }
 
         unregisterReceiver(mDownloadFinishReceiver);
@@ -546,23 +587,23 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
         context.registerReceiver(mDownloadFinishReceiver, intentFilter);
     }
 
-    private void ConnectedSocket() {
+    private void ConnectedSocket(SocketConnection socket) {
         Log.d(TAG, "ConnectedSocket ....enter");
         if (mp == null) return;
         boolean ret = true;
                 try {
                     Log.d(TAG, "ConnectedSocket connect .....");
-                    ret = socketConnection.connect(hostname);
+                    ret = socket.connect();
                     while(!ret) {
                         Thread.sleep(10000);
                         Log.d(TAG, "Socket error, connected again");
-                        ret = socketConnection.connect(hostname);
+                        ret = socket.connect();
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
                 } finally {
-                    socketConnection.closeSocket();
-                    socketConnection = null;
+                    socket.closeSocket();
+                    socket = null;
 
                 }
 
