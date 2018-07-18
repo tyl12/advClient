@@ -20,7 +20,7 @@ public class Constants {
     public static final int CHANGE_DURATION = 60000;
     public static final int RECEIVE_TIMEOUT = 3000;
     public static final boolean IS_RANDOM = true;
-    public static final int WEIGHT_PORT = 7112;
+    public static final int WEIGHT_PORT = 8113;
     public static final int AD_PORT = 8882;
 
 

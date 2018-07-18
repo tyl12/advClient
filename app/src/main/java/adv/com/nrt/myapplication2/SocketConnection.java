@@ -40,6 +40,8 @@ public class SocketConnection {
             osw.write(entry, 0, entry.length());
             osw.flush();
             Log.d("chenqiao", "entry.length = " + entry.length());
+            Log.d("chenqiao", "entry = " + entry);
+
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -62,7 +64,7 @@ public class SocketConnection {
             isConnected = false;
         }
 
-        //System.out.println("recv: " + s);
+        System.out.println("recv: " + s);
         mSocketListener.onReceive(s, mIsWeight);
         return s;
     }
