@@ -39,8 +39,7 @@ public class SocketConnection {
             dos.flush();
             osw.write(entry, 0, entry.length());
             osw.flush();
-            Log.d("chenqiao", "entry.length = " + entry.length());
-            Log.d("chenqiao", "entry = " + entry);
+
 
         } catch (IOException e) {
             // TODO Auto-generated catch block

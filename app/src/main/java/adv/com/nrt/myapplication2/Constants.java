@@ -12,8 +12,8 @@ public class Constants {
     public static final String HTTPS_TMP_DATA_LIST = "datatemp.json";
     public static final String HTTPS_DATA_JSON = "data.json";
     public static final String HOST_NAME = "192.168.0.100";
-    public static final String FILE_ADDRESS_ROOT = "/mnt/sdcard/Shelter/";
-    public static final String FILE_CFG = "/mnt/sdcard/ad.cfg";
+    public static final String FILE_ADDRESS_ROOT = "/sdcard/Shelter/";
+    public static final String FILE_CFG = "/sdcard/ad.cfg";
     public static final String FILE_SUBDIR = "data/";
     public static final String JSON_DATA_ID = "adID";
     public static final String JSON_DATA_NAME = "name";

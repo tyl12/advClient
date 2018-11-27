@@ -1,8 +1,11 @@
 package adv.com.nrt.myapplication2;
+import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
@@ -12,9 +15,13 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.media.MediaPlayer;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.provider.Settings;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.Display;
 import android.view.SurfaceHolder;
@@ -26,6 +33,7 @@ import android.widget.ImageView;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.InputStreamReader;
+import java.util.List;
 import java.util.Random;
 
 import com.google.android.gms.appindexing.Action;
@@ -83,6 +91,7 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
     private JSONArray mNeedUPdateJSONArray = null;
     private int flagForPicture = 0;
     private boolean isFirstCreate = false;
+    private boolean mAllPremissionIsGaint = false;
 
     public class ConnectThread extends Thread{
         public void run() {
@@ -194,6 +203,7 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
 
 
 
+
     @Override
     public void onReceive(String s, boolean isWeight) {
         if (s == null || s.equals("advertise")) {
@@ -201,6 +211,9 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
             return;
         }
 
+        if (!mAllPremissionIsGaint) {
+            return;
+        }
         long currentTimeMillis = System.currentTimeMillis();
         //Log.d(TAG, "onReceive send message currentTimeMillis = " + currentTimeMillis
         //    + "; lastTime = " + lastTime);
@@ -268,7 +281,9 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
                     Log.d(TAG, "start play normal");
                     isFirstCreate = false;
                     isSurfaceCreated = true;
-                    myHandler.sendEmptyMessage(MSG_PLAY_NORMAL);
+                    if (mAllPremissionIsGaint) {
+                        myHandler.sendEmptyMessage(MSG_PLAY_NORMAL);
+                    }
                 }
             }
 
@@ -486,23 +501,122 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
     }
     private void initData() {
         Log.d(TAG, "init data");
-        p_video_path = FileUtils.getFileList("/mnt/sdcard/Shelter");
+        p_video_path = FileUtils.getFileList("/sdcard/Shelter");
     }
+
+    private int RECEIVE_BOOT_COMPLETED = 0x00091;
+    private int READ_EXTERNAL_STORAGE = 0x00092;
+    private int WRITE_EXTERNAL_STORAGE = 0x00093;
+    private int MOUNT_UNMOUNT_FILESYSTEMS = 0x00094;
+    private int INTERNET = 0x00095;
+    private int ACCESS_NETWORK_STATE = 0x00096;
+    private int DOWNLOAD_WITHOUT_NOTIFICATION = 0x00097;
+    /**
+     * 请求权限
+     *
+     * @param permissions 请求的权限
+     * @param requestCode 请求权限的请求码
+     */
+    public void requestPermission(String[] permissions, int requestCode) {
+        this.READ_EXTERNAL_STORAGE = requestCode;
+        if (checkPermissions(permissions)) {
+            permissionSuccess(READ_EXTERNAL_STORAGE);
+        } else {
+            List<String> needPermissions = getDeniedPermissions(permissions);
+            ActivityCompat.requestPermissions(this, needPermissions.toArray(new String[needPermissions.size()]), READ_EXTERNAL_STORAGE);
+        }
+    }
+
+    /**
+     * 检测所有的权限是否都已授权
+     *
+     * @param permissions
+     * @return
+     */
+    private boolean checkPermissions(String[] permissions) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return true;
+        }
+
+        for (String permission : permissions) {
+            if (ContextCompat.checkSelfPermission(this, permission) !=
+                    PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 获取权限集中需要申请权限的列表
+     *
+     * @param permissions
+     * @return
+     */
+    private List<String> getDeniedPermissions(String[] permissions) {
+        List<String> needRequestPermissionList = new ArrayList<>();
+        for (String permission : permissions) {
+            if (ContextCompat.checkSelfPermission(this, permission) !=
+                    PackageManager.PERMISSION_GRANTED ||
+                    ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
+                needRequestPermissionList.add(permission);
+            }
+        }
+        return needRequestPermissionList;
+    }
+
+
+
+    /**
+     * 确认所有的权限是否都已授权
+     *
+     * @param grantResults
+     * @return
+     */
+    private boolean verifyPermissions(int[] grantResults) {
+        for (int grantResult : grantResults) {
+            if (grantResult != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 获取权限成功
+     *
+     * @param requestCode
+     */
+    public void permissionSuccess(int requestCode) {
+        Log.d(TAG, "获取权限成功=" + requestCode);
+
+    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+       // getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,WindowManager.LayoutParams.FLAG_FULLSCREEN);
+
         //requestPermissions(new String[]{"android.permission.READ_EXTERNAL_STORAGE"},1);
         setContentView(R.layout.activity_main);
         mContext = this;
         mAdvPic = (ImageView) findViewById(R.id.image_adv_pic);
         isFirstCreate = true;
-        initConfig();
+
         //init();
         //registerBroadcastReceiver(this);
         //mdsumFileVerify();
-        initData();
+        if (!checkPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE,Manifest.permission.READ_EXTERNAL_STORAGE})) {
+            Log.d(TAG, " premission is not GRANTED, request it");
+            requestPermission(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},READ_EXTERNAL_STORAGE);
+        } else {
+            mAllPremissionIsGaint = true;
+            Log.d(TAG, " all premissions are GRANTED, go on");
+            initConfig();
+            initData();
+        }
         adSocketConnection = new SocketConnection(hostname, Constants.AD_PORT, false);
         adSocketConnection.setListener(MainActivity.this);
         weightSocketConnection = new SocketConnection(hostname, Constants.WEIGHT_PORT, true);
@@ -579,7 +693,7 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
             weightSocketConnection.closeSocket();
         }
 
-        unregisterReceiver(mDownloadFinishReceiver);
+        //unregisterReceiver(mDownloadFinishReceiver);
     }
 
     private void registerBroadcastReceiver(Context context) {
@@ -670,7 +784,19 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        if (1 == requestCode) {
+        Log.d(TAG, "grantResults.length is " + grantResults.length + "grantResults[0] is " + grantResults[0]);
+        if (requestCode == READ_EXTERNAL_STORAGE) {
+            if (verifyPermissions(grantResults)) {
+                initData();
+                initConfig();
+                myHandler.sendEmptyMessage(MSG_PLAY_NORMAL);
+                //playVideo("/mnt/sdcard/Shelter/vedio_teacher.mp4");
+            } else {
+                Log.d(TAG, "permission denied");
+                finish();
+            }
+        }
+        /*if (1 == requestCode) {
             Log.d(TAG, "grantResults.length is " + grantResults.length + "grantResults[0] is " + grantResults[0]);
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 playVideo("/mnt/sdcard/Shelter/vedio_teacher.mp4");
@@ -681,7 +807,7 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
         } else {
             Log.d(TAG, "permission denied");
             finish();
-        }
+        }*/
     }
 
     BroadcastReceiver mDownloadFinishReceiver = new BroadcastReceiver() {
