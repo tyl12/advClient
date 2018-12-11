@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import android.util.Base64;
 
 public class SocketConnection {
     private static final String TAG = "SocketConnection";
@@ -32,15 +33,14 @@ public class SocketConnection {
         }
     }
 
-    void sendEntry(String entry) {
-
+    void sendKey(String entry) {
         try {
+            //no base64 encode
             dos.writeInt(entry.length());
             dos.flush();
             osw.write(entry, 0, entry.length());
             osw.flush();
-
-
+            System.out.println("socketInfo:sendKey: " + "key="+entry+", length="+entry.length());
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -48,15 +48,47 @@ public class SocketConnection {
 
     }
 
-    String recvEntry() {
+    void sendEntry(String entry) {
+        try {
+            //base64 encode
+            byte[] data=entry.getBytes("UTF-8");
+            String base64 = Base64.encodeToString(data, Base64.DEFAULT);
+            dos.writeInt(base64.length());
+            dos.flush();
+            osw.write(base64, 0, base64.length());
+            osw.flush();
+            System.out.println("socketInfo:sendEntry: " + "entry="+entry+", base64="+ base64 + ", length="+ base64.length());
+
+            /*
+            //no base64 encode
+            dos.writeInt(entry.length());
+            dos.flush();
+            osw.write(entry, 0, entry.length());
+            osw.flush();
+            */
+
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+    }
+    String recvKey() {
         int len;
         String s = null;
         try {
+            //no base64 decode
             len = dis.readInt();
+
+            System.out.println("socketInfo:recvKey: " + "length="+len);
+
            // System.out.println(len);
             byte[] array = new byte[len];
             dis.read(array);
             s = new String(array);
+
+            System.out.println("socketInfo:recvKey: " + "key="+s);
+
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -65,6 +97,40 @@ public class SocketConnection {
 
         System.out.println("recv: " + s);
         mSocketListener.onReceive(s, mIsWeight);
+
+        return s;
+    }
+    String recvEntry() {
+        int len;
+        String s = null;
+        try {
+            //base64 decode
+            len = dis.readInt();
+
+            System.out.println("socketInfo:recvEntry: " + "length="+len);
+            byte[] array = new byte[len];
+            dis.read(array);
+            String bs = new String(array);
+            byte[] data = Base64.decode(bs, Base64.DEFAULT);
+            s = new String(data);
+            System.out.println("socketInfo:recvEntry: " + "entry="+s);
+            /*
+            //no base64 decode
+            len = dis.readInt();
+           // System.out.println(len);
+            byte[] array = new byte[len];
+            dis.read(array);
+            s = new String(array);
+            */
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            isConnected = false;
+        }
+
+        System.out.println("recv: " + s);
+        mSocketListener.onReceive(s, mIsWeight);
+
         return s;
     }
 
@@ -84,24 +150,23 @@ public class SocketConnection {
         //String msg = "message";
         try {
             //socket = new Socket("67.218.158.111", 8881);
-            Log.e(TAG, "111111hostname = " + mHostname);
+            Log.e(TAG, "hostname = " + mHostname + " port = " + mPort);
             socket = new Socket(mHostname, mPort);
-            Log.e(TAG, "hostname = " + mHostname);
             dos = new DataOutputStream(socket.getOutputStream());
             osw = new OutputStreamWriter(socket.getOutputStream(), "UTF-8");
             dis = new DataInputStream(socket.getInputStream());
 
             isConnected = true;
-            sendEntry(str);
+            sendKey(str);
             String macStr = FileUtils.getMacAddress();
-            System.out.println("mac addr is" + macStr);
-            Log.e(TAG, "mac addr is" + macStr);
+            System.out.println("mac addr is: " + macStr);
+            Log.e(TAG, "mac addr is: " + macStr);
             sendEntry(macStr);
 
             while (isConnected) {
-                    String key = recvEntry();
+                    String key = recvKey();
                     String value = recvEntry();
-                //System.out.println("receive client msg: " + key + " & " + value);
+                    System.out.println("receive client msg: " + key + " & " + value);
             }
             //Thread.sleep(1000*10);
         } catch (IOException e) {

@@ -232,7 +232,12 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
                 return;
             }
             //Video_index = Integer.parseInt(s);
-            int id = Integer.parseInt(s);
+            int id = 0;
+            try {
+                id = Integer.parseInt(s);
+            } catch (Exception e) {
+                Log.e(TAG, "invalid int string !!! ", e);
+            }
 //            Random random = new Random();
 //            int id = random.nextInt(8);
             // Log.d(TAG, "onReceive id = " + id);
@@ -631,7 +636,7 @@ public class MainActivity extends Activity implements SocketConnection.SocketLis
         vedioSurfaceView();
         //ConnectedSocket();
         new ConnectThread().start();
-        new ConnectWeightThread().start();
+//        new ConnectWeightThread().start();
         // ATTENTION: This was auto-generated to implement the App Indexing API.
         // See https://g.co/AppIndexing/AndroidStudio for more information.
         client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();

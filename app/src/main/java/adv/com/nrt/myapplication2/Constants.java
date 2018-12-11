@@ -6,7 +6,7 @@ package adv.com.nrt.myapplication2;
 
 public class Constants {
     //1. mac address
-    public static final String HTTPS_SERVER_ADDRESS = "http://192.168.0.100/";
+    public static final String HTTPS_SERVER_ADDRESS = "http://192.168.10.111/";
     public static final String HTTPS_SUM_FLAG = "md5sum";
     public static final String HTTPS_SUM_FLAG_TEMP = "md5sumtemp";
     public static final String HTTPS_TMP_DATA_LIST = "datatemp.json";
